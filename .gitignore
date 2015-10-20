@@ -1,0 +1,8 @@
+.classpath
+/gen
+/bin
+*.dex
+*.ap_
+*.class
+Thumbs.db
+.DS_Store
