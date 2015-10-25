@@ -11,11 +11,19 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.preference.PreferenceActivity;
+import android.util.Log;
+import android.view.ContextMenu;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.SubMenu;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -24,16 +32,23 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.Toast;
 
 // PreferenceActivity继承自ListActivity，哈哈，这我就放心了，可以放开使用ListActivity的方法了
 public class WifiScanActivity extends PreferenceActivity {
 
+	public static String TAG = "WifiScanActivity";
 	private WifiManager mWifiManager;
 	// 用一个List来保存扫描到的各个热点的扫描结果
 	private List<ScanResult> mList_Results;
 
 	private ListView mListView;
 	private WifiapAdapter mAdapter;
+	
+	//这个主线程中的Handler负责处理ClientThread中的匿名子线程中发送过来的消息(当然内容是来自服务器端)
+	private Handler mHandler;
+	//与服务器通信的子线程
+	private ClientThread clientThread;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -49,6 +64,21 @@ public class WifiScanActivity extends PreferenceActivity {
 		// 对ListView设置监听器
 		mListView = getListView();
 		mListView.setOnItemClickListener(mItemOnClick);
+		
+		mHandler = new Handler(){
+			@Override
+			public void handleMessage (Message msg){
+				//如果消息来自于子线程
+				if(msg.what == 0x222){
+					//先通知用户，已经接受到来自服务器的消息了
+					Toast.makeText(WifiScanActivity.this, "已更新热点信息",Toast.LENGTH_SHORT).show();
+
+					//TODO 还有后续的功能待完善。。。先不把msg显示出来
+					Log.v("WifiScanActivity",msg.obj.toString());
+				}
+			}
+		};
+		
 	}
 
 	/**
@@ -80,6 +110,15 @@ public class WifiScanActivity extends PreferenceActivity {
 		return  ((ConnectivityManager) this.getSystemService(Context.CONNECTIVITY_SERVICE)).getNetworkInfo(ConnectivityManager.TYPE_WIFI).isConnected();
 	}
 	
+	/**
+	 * 判断网络连接是否畅通
+	 */
+	private boolean isOnline(){
+	    ConnectivityManager connMgr =(ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
+	    NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+	    //networkInfo不为空，且isConnected()返回true
+	    return(networkInfo !=null&& networkInfo.isConnected());
+	}
 /**
  * 	获取BSSID
  */
@@ -96,10 +135,8 @@ public class WifiScanActivity extends PreferenceActivity {
 			// An access point scan has completed
 			if (action.equals(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)) {
 				mList_Results = mWifiManager.getScanResults();
-
-				// Notifies the attached observers that the underlying data has
-				// been changed and any View reflecting the data set should
-				// refresh itself.
+				
+				
 				mAdapter.notifyDataSetChanged();
 
 				mWifiManager.startScan();
@@ -255,4 +292,46 @@ public class WifiScanActivity extends PreferenceActivity {
 		activity.startActivity(intent);
 	}
 
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu){
+		
+		getMenuInflater().inflate(R.menu.activity_main, menu); 
+		return true;
+		
+	}
+	
+	@Override
+	public boolean onOptionsItemSelected(MenuItem mi){
+		
+		switch ( mi.getItemId() ){
+		
+		case R.id.action_send_to_server :
+			
+			Log.v(TAG,"已点击Send to server按钮");
+			
+			if (isOnline() ) {
+				Log.v(TAG,"网络连接畅通");
+				//加一个新线程用于与服务器通信
+				clientThread = new ClientThread(mHandler);
+				//在主线程中启动ClientThread线程用来与服务器通信
+				new Thread(clientThread).start();
+				
+				if (mList_Results != null) {
+					Log.v(TAG,"mList_Results不为null");
+					for (int i = 0; i < mList_Results.size(); i++) {
+						Message msg = new Message();
+						msg.what = 0x111;
+						msg.obj = mList_Results.get(i);
+						if (clientThread.rcvHandler != null) {
+							clientThread.rcvHandler.sendMessage(msg);
+							Log.v(TAG, "clientThread.rcvHandler已发送消息：0x111");
+						}
+					}
+				}
+			}
+			break;
+		}
+		return true;
+		
+	}
 }

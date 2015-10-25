@@ -31,10 +31,7 @@ import com.farproc.wifi.ui.Floating;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
-import android.view.ContextMenu;
-import android.view.MenuItem;
 import android.view.View;
-import android.view.ContextMenu.ContextMenuInfo;
 import android.view.View.OnClickListener;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -109,15 +106,5 @@ public class ChangePasswordContent extends BaseContent {
 	};
 	
 	OnClickListener mOnClickListeners[] = {mSaveOnClick, mCancelOnClick};
-
-	@Override
-	public boolean onContextItemSelected(MenuItem item) {
-		return false;
-	}
-
-	@Override
-	public void onCreateContextMenu(ContextMenu menu, View v,
-			ContextMenuInfo menuInfo) {
-	}
 
 }

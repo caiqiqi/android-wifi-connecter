@@ -30,7 +30,6 @@ import com.farproc.wifi.connecter.ConfiguredNetworkContent;
 import com.farproc.wifi.connecter.CurrentNetworkContent;
 import com.farproc.wifi.connecter.NewNetworkContent;
 import com.farproc.wifi.connecter.Wifi;
-import com.farproc.wifi.utils.WifiApManager;
 
 import android.content.Intent;
 import android.net.wifi.ScanResult;
@@ -57,7 +56,6 @@ public class FloatingActivity extends Floating {
 
 	private Floating.Content mContent;
 	private WifiManager mWifiManager;
-	private WifiApManager mWifiApManager; 
 
 	@Override
 	protected void onNewIntent(Intent intent) {
@@ -73,7 +71,6 @@ public class FloatingActivity extends Floating {
 		//注意super与requestFeature()调用的顺序
 		super.onCreate(savedInstanceState);
 		mWifiManager = (WifiManager) getSystemService(WIFI_SERVICE);
-		mWifiApManager = new WifiApManager(this);
 		
 		doNewIntent(getIntent());
 	}
@@ -124,7 +121,7 @@ public class FloatingActivity extends Floating {
 				} else {
 					
 					if (isCurrentNetwork() || isCurrentConfigurationStatus(str_security,config)) {
-						mContent = new CurrentNetworkContent(this, mWifiManager, mScanResult, mWifiApManager);
+						mContent = new CurrentNetworkContent(this, mWifiManager, mScanResult);
 					} else {
 						mContent = new ConfiguredNetworkContent(this, mWifiManager, mScanResult);
 					}

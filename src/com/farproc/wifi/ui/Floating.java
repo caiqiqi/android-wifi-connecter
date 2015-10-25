@@ -30,8 +30,6 @@ import com.farproc.wifi.connecter.R;
 import android.app.Activity;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
-import android.view.ContextMenu;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -124,19 +122,6 @@ public class Floating extends Activity {
 		}
 	}
 	
-	public void onCreateContextMenu (ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
-		if(mContent != null) {
-			mContent.onCreateContextMenu(menu, v, menuInfo);
-		}
-	}
-	
-	public boolean onContextItemSelected (MenuItem item) {
-		if(mContent != null) {
-			return mContent.onContextItemSelected(item);
-		}
-		return false;
-	}
-	
 //接口定义	
 	public interface Content {
 		/**
@@ -159,8 +144,5 @@ public class Floating extends Activity {
 		 * 得到那个按钮的监听器
 		 */
 		OnClickListener getButtonOnClickListener(int index);
-		
-		void onCreateContextMenu (ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo);
-		boolean onContextItemSelected (MenuItem item);
 	}
 }

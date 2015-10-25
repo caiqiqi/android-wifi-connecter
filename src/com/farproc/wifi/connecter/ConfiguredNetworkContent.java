@@ -31,11 +31,7 @@ import com.farproc.wifi.ui.Floating;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
-import android.view.ContextMenu;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
-import android.view.ContextMenu.ContextMenuInfo;
 import android.view.View.OnClickListener;
 import android.widget.Toast;
 
@@ -169,29 +165,6 @@ public class ConfiguredNetworkContent extends BaseContent {
 		}
 		
 		mFloating.finish();
-	}
-	
-	private static final int MENU_FORGET = 0;
-	private static final int MENU_CHANGE_PASSWORD = 1;
-
-	@Override
-	public boolean onContextItemSelected(MenuItem item) {
-		switch(item.getItemId()) {
-		case MENU_FORGET:
-			forget();
-			break;
-		case MENU_CHANGE_PASSWORD:
-			changePassword();
-			break;
-		}
-		return false;
-	}
-
-	@Override
-	public void onCreateContextMenu(ContextMenu menu, View v,
-			ContextMenuInfo menuInfo) {
-		menu.add(Menu.NONE, MENU_FORGET, Menu.NONE, R.string.forget_network);
-		menu.add(Menu.NONE, MENU_CHANGE_PASSWORD, Menu.NONE, R.string.wifi_change_password);
 	}
 
 }

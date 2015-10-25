@@ -42,10 +42,7 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.util.Log;
-import android.view.ContextMenu;
-import android.view.MenuItem;
 import android.view.View;
-import android.view.ContextMenu.ContextMenuInfo;
 import android.view.View.OnClickListener;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -62,13 +59,12 @@ public class CurrentNetworkContent extends BaseContent {
 	WifiApManager mWifiApManager; 
 	int mConnectCount;
 	
-	public CurrentNetworkContent(Floating floating, WifiManager wifiManager, ScanResult scanResult, WifiApManager wifiApManager) {
+	public CurrentNetworkContent(Floating floating, WifiManager wifiManager, ScanResult scanResult) {
 		super(floating, wifiManager, scanResult);
 		//先设置那几个TextView为GONE
 		findViewAndSetGone();
 	
 		this.mScanResult = scanResult;
-		this.mWifiApManager = wifiApManager;
 		final WifiInfo wifiInfo = mWifiManager.getConnectionInfo();
 		final DhcpInfo dhcpInfo =mWifiManager.getDhcpInfo();
 		
@@ -189,16 +185,6 @@ public class CurrentNetworkContent extends BaseContent {
 	private OnClickListener mOnClickListeners[] = {mForgetOnClick, mChangePasswordOnClick, mCancelOnClick};
 	
 
-	@Override
-	public boolean onContextItemSelected(MenuItem item) {
-		return false;
-	}
-
-	@Override
-	public void onCreateContextMenu(ContextMenu menu, View v,
-			ContextMenuInfo menuInfo) {
-	}
-
 	private class GetCountTask extends AsyncTask<Void, Void, Integer>{
 
 		int count;
@@ -210,13 +196,12 @@ public class CurrentNetworkContent extends BaseContent {
 				br = new BufferedReader(new FileReader("/proc/net/arp"));
 				String line;
 				while ((line = br.readLine()) != null) {
-					Log.v("WifiApManager.java :while循环开头", line);
+					
 					String[] splitted = line.split(" +");
 					//split(" +") 按空格进行拆分（也就是说只有按空格键流出来的空白才会是拆分的一句）
 
 					if ((splitted != null) && (splitted.length >= 4)) {
 						count++;
-						Log.v("WifiApManager.java ", splitted[0]);
 					}
 				}
 			} catch (Exception e) {
