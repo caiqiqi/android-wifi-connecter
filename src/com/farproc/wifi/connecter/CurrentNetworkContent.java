@@ -31,7 +31,6 @@ import java.io.IOException;
 
 import com.farproc.wifi.connecter.R;
 import com.farproc.wifi.ui.Floating;
-import com.farproc.wifi.utils.WifiApManager;
 
 import android.net.DhcpInfo;
 import android.net.NetworkInfo;
@@ -56,7 +55,6 @@ public class CurrentNetworkContent extends BaseContent {
 
 	public final String TAG = "CurrentNetworkContent";
 	private ScanResult mScanResult;
-	WifiApManager mWifiApManager; 
 	int mConnectCount;
 	
 	public CurrentNetworkContent(Floating floating, WifiManager wifiManager, ScanResult scanResult) {

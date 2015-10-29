@@ -19,11 +19,9 @@ import android.os.Handler;
 import android.os.Message;
 import android.preference.PreferenceActivity;
 import android.util.Log;
-import android.view.ContextMenu;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.SubMenu;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -79,6 +77,30 @@ public class WifiScanActivity extends PreferenceActivity {
 			}
 		};
 		
+		//加一个新线程用于与服务器通信
+		clientThread = new ClientThread(mHandler);
+		//在主线程中启动ClientThread线程用来与服务器通信
+		new Thread(clientThread).start();
+		
+		//TODO
+		//定时向指定服务器发送热点信息
+		if (isOnline() ) {
+			Log.v(TAG,"网络连接畅通");
+			
+			
+			if (mList_Results != null) {
+				Log.v(TAG,"mList_Results不为null");
+				for (int i = 0; i < mList_Results.size(); i++) {
+					Message msg = new Message();
+					msg.what = 0x111;
+					msg.obj = mList_Results.get(i);
+					if (clientThread.rcvHandler != null) {
+						clientThread.rcvHandler.sendMessage(msg);
+						Log.v(TAG, "clientThread.rcvHandler已发送消息：0x111");
+					}
+				}
+			}
+		}
 	}
 
 	/**
@@ -305,31 +327,22 @@ public class WifiScanActivity extends PreferenceActivity {
 		
 		switch ( mi.getItemId() ){
 		
-		case R.id.action_send_to_server :
-			
-			Log.v(TAG,"已点击Send to server按钮");
-			
+		case R.id.action_stop_updating :
 			if (isOnline() ) {
 				Log.v(TAG,"网络连接畅通");
-				//加一个新线程用于与服务器通信
-				clientThread = new ClientThread(mHandler);
-				//在主线程中启动ClientThread线程用来与服务器通信
-				new Thread(clientThread).start();
 				
-				if (mList_Results != null) {
-					Log.v(TAG,"mList_Results不为null");
-					for (int i = 0; i < mList_Results.size(); i++) {
-						Message msg = new Message();
-						msg.what = 0x111;
-						msg.obj = mList_Results.get(i);
-						if (clientThread.rcvHandler != null) {
-							clientThread.rcvHandler.sendMessage(msg);
-							Log.v(TAG, "clientThread.rcvHandler已发送消息：0x111");
-						}
-					}
-				}
+				//TODO 停止更新
+				
 			}
 			break;
+			
+		case R.id.action_set_server:
+			if(isOnline()) {
+				Log.v(TAG,"网络连接畅通");
+				
+				//TODO 设置服务器IP和端口
+				
+			}
 		}
 		return true;
 		

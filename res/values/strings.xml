@@ -142,4 +142,7 @@
     <string name="wifi_settings">Wi\u2011Fi</string>
     
     <string name="confirm">OK</string>
+    <string name="send_to_server">Send to server</string>
+    <string name="stop_updating">Stop Updating</string>
+    <string name="set_server">Set Server</string>
 </resources>

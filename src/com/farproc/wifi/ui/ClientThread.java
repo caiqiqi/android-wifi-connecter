@@ -16,7 +16,7 @@ public class ClientThread implements Runnable {
 	
 	public static String TAG = "ClientThread";
 	
-	private static String SERVER_IP = "192.168.23.4";
+	private static String SERVER_IP = "192.168.24.1";
 	private static int SERVER_PORT = 30000;
 	private Socket s;
 	
