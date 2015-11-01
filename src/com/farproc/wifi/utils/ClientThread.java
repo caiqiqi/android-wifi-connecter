@@ -4,15 +4,19 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.Socket;
-import java.net.SocketTimeoutException;
+import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import android.content.Context;
+import android.net.wifi.ScanResult;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
-import android.widget.Toast;
 
 public class ClientThread implements Runnable {
 	
@@ -31,7 +35,10 @@ public class ClientThread implements Runnable {
 	
 	//该线程所处理的Socket所对应的输入流
 	private BufferedReader br;
-	public OutputStream os;
+	
+	private OutputStream os;
+//	//用PrintWriter作为输出流
+//	public PrintWriter out;
 	
 	public ClientThread(Context context, Handler handler){
 		this.mContext = context;
@@ -42,13 +49,9 @@ public class ClientThread implements Runnable {
 
 		Log.v(TAG,"ClientThread started");
 		try {
-			s = new Socket (SERVER_IP, SERVER_PORT);
-			//判断Socket是否已连接到服务器
-			if(s.isConnected()){
-				Log.v("ClientThread", "Client connected to the server successfully!");
-			}
-			init();  
 			
+			s = new Socket (SERVER_IP, SERVER_PORT);
+			init();
 			//为当前线程初始化Looper
 			Looper.prepare();
 			
@@ -60,26 +63,37 @@ public class ClientThread implements Runnable {
 					
 					if(msg.what == 0x111){
 						
+						List<ScanResult> result = (List<ScanResult>) msg.obj;
+						
 						try{
 							
-							if (s.isConnected()) {
-								os.write((msg.obj.toString() + "\r\n").getBytes("utf-8"));
-								//啊，怪不得服务器那边怎么老不关闭流，原来是这边客户端没有关闭，所以服务器那边一直在等
-								//os.flush();
-								//close()方法也调用了flush()，所以不用再调用了
-								//有博主说如果你的文件读写没有达到预期目的，那么十有八九是因为没有调用flush()或者close()方法
-								//os.close();
-							} else {
-								Toast.makeText(mContext, "Socket连接已断开，尝试重新连接...", Toast.LENGTH_SHORT).show();
-								s = new Socket (SERVER_IP, SERVER_PORT);
-								if (s.isConnected()){
-									Toast.makeText(mContext, "Socket已连接！", Toast.LENGTH_SHORT).show();
-								}
+							if(! s.isConnected()){
+								s = new Socket(SERVER_IP, SERVER_PORT);
+								Log.v("ClientThread", "Client connected to the server successfully!");
+								init();
 							}
-						} catch(Exception e){
+//							sendToServer(result);
+							sendUsingThreadPool(result);
+							
+							} catch(Exception e){
 							e.printStackTrace();
 						}
 					}
+				}
+
+				private void sendToServer(List<ScanResult> result) throws IOException, UnsupportedEncodingException {
+					//执行到下面的时候是肯定有socket连接的
+					List<ScanResult> list = (List<ScanResult>) result;
+					for (ScanResult r : list) {
+						os.write((r.toString() + "\r\n").getBytes("utf-8"));
+						os.flush();
+						//这里不用close()，直接flush()就可以搞定。另外如果这里close()了，OutputStream就不容易再打开了
+					}
+					//os.close();
+					// 啊，怪不得服务器那边怎么老不关闭流，原来是这边客户端没有关闭，所以服务器那边一直在等
+					// os.flush();
+					// close()方法也调用了flush()，所以不用再调用了
+					// 有博主说如果你的文件读写没有达到预期目的，那么十有八九是因为没有调用flush()或者close()方法
 				}
 			};
 			//启动一条子线程来读取服务器响应的数据
@@ -107,7 +121,7 @@ public class ClientThread implements Runnable {
 						}
 					} catch(IOException e){
 						e.printStackTrace();
-					}
+					} 
 				}
 			}.start();
 			
@@ -115,15 +129,39 @@ public class ClientThread implements Runnable {
 			//注意:写在Looper.loop()之后的代码不会被执行,这个函数内部应该是一个循环
 			Looper.loop();
 			
-		} catch (SocketTimeoutException e1){
-			Log.v(TAG,"网络连接超时！");
 		} catch (Exception e){
 			e.printStackTrace();
 		}
 	}
 
 	private void init() throws IOException {
-		br = new BufferedReader(new InputStreamReader(s.getInputStream()));
-		os = s.getOutputStream();
+		br = new BufferedReader(new InputStreamReader(this.s.getInputStream()));
+		os = this.s.getOutputStream();
+	}
+	
+private void sendUsingThreadPool(final List<ScanResult> scanResult){
+		
+		//启动一个线程每5秒钟向日志文件写一次数据  
+        ScheduledExecutorService exec =   Executors.newScheduledThreadPool(1); 
+        exec.scheduleWithFixedDelay(new Runnable(){
+
+			@Override
+			public void run() {
+				List<ScanResult> list = scanResult;
+				for (ScanResult result : list) {
+					try {
+						
+						os.write((result.toString() + "\r\n").getBytes("utf-8"));
+						os.flush();
+					} catch (UnsupportedEncodingException e) {
+						e.printStackTrace();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					//这里不用close()，直接flush()就可以搞定。另外如果这里close()了，OutputStream就不容易再打开了
+				}
+			}
+        	
+        }, 0, 5, TimeUnit.SECONDS);
 	}
 }

@@ -2,6 +2,9 @@ package com.farproc.wifi.ui;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import com.farproc.wifi.connecter.R;
 import com.farproc.wifi.utils.ClientThread;
@@ -64,6 +67,7 @@ public class WifiScanActivity extends PreferenceActivity {
 		
 		startNewThread();
 		
+		
 		sendToServer();
 	}
 
@@ -75,28 +79,22 @@ public class WifiScanActivity extends PreferenceActivity {
 			
 			if (mList_Results != null) {
 				Log.v(TAG,"mList_Results不为null");
-				for (int i = 0; i < mList_Results.size(); i++) {
-					Message msg = new Message();
-					msg.what = 0x111;
-					msg.obj = mList_Results.get(i);
-					if (mClientThread.rcvHandler != null) {
-						mClientThread.rcvHandler.sendMessage(msg);
-						Log.v(TAG, "clientThread.rcvHandler已发送消息：0x111");
-					}
-				}
-				//这里将ClientThread的os给这个Activity调用，不知道是不是不太好
-				//主要是因为要在for这个循环结束之后再关闭，如果不这么写，可以怎么做呢？
-				//另外上面的rcvHandler是ClientThread的，也在这里调用了。。。
-				try {
-					mClientThread.os.close();
-					Log.v(TAG, "ClientThread已向Socket中发送消息：0x111");
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				//用ClientThread的Handler来发送消息
+				sendMessage();
 			}
 		}
 	}
 
+	private void sendMessage() {
+		Message msg = new Message();
+		msg.what = 0x111;
+		//靠，直接把mList_Results作为msg.obj不就行了
+		msg.obj = mList_Results;
+		if (mClientThread.rcvHandler != null) {
+			mClientThread.rcvHandler.sendMessage(msg);
+		}
+	}
+	
 	private void startNewThread() {
 		//加一个新线程用于与服务器通信
 		mClientThread = new ClientThread(WifiScanActivity.this, mHandler);
