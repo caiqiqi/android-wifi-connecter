@@ -1,8 +1,10 @@
 package com.farproc.wifi.ui;
 
+import java.io.IOException;
 import java.util.List;
 
 import com.farproc.wifi.connecter.R;
+import com.farproc.wifi.utils.ClientThread;
 import com.squareup.picasso.Picasso;
 
 import android.app.Activity;
@@ -46,7 +48,7 @@ public class WifiScanActivity extends PreferenceActivity {
 	//这个主线程中的Handler负责处理ClientThread中的匿名子线程中发送过来的消息(当然内容是来自服务器端)
 	private Handler mHandler;
 	//与服务器通信的子线程
-	private ClientThread clientThread;
+	private ClientThread mClientThread;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -54,15 +56,68 @@ public class WifiScanActivity extends PreferenceActivity {
 
 		mWifiManager = (WifiManager) getSystemService(WIFI_SERVICE);
 		
+		initAdapter();
+
+		initListView();
+		
+		initHandler();
+		
+		startNewThread();
+		
+		sendToServer();
+	}
+
+	private void sendToServer() {
+		//TODO
+		//定时向指定服务器发送热点信息
+		if (isOnline() ) {
+			Log.v(TAG,"网络连接畅通");
+			
+			if (mList_Results != null) {
+				Log.v(TAG,"mList_Results不为null");
+				for (int i = 0; i < mList_Results.size(); i++) {
+					Message msg = new Message();
+					msg.what = 0x111;
+					msg.obj = mList_Results.get(i);
+					if (mClientThread.rcvHandler != null) {
+						mClientThread.rcvHandler.sendMessage(msg);
+						Log.v(TAG, "clientThread.rcvHandler已发送消息：0x111");
+					}
+				}
+				//这里将ClientThread的os给这个Activity调用，不知道是不是不太好
+				//主要是因为要在for这个循环结束之后再关闭，如果不这么写，可以怎么做呢？
+				//另外上面的rcvHandler是ClientThread的，也在这里调用了。。。
+				try {
+					mClientThread.os.close();
+					Log.v(TAG, "ClientThread已向Socket中发送消息：0x111");
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+
+	private void startNewThread() {
+		//加一个新线程用于与服务器通信
+		mClientThread = new ClientThread(WifiScanActivity.this, mHandler);
+		//在主线程中启动ClientThread线程用来与服务器通信
+		new Thread(mClientThread).start();
+	}
+
+	private void initAdapter() {
 		//这句话不能再onCreate()方法之前调用，即不能放在onCreate()方法的外面，因为系统得首先执行onCreate()
 		mAdapter = new WifiapAdapter(this,mList_Results);
 		// 为这个ListActivity设置Adapter
 		setListAdapter(mAdapter);
+	}
 
+	private void initListView() {
 		// 对ListView设置监听器
 		mListView = getListView();
 		mListView.setOnItemClickListener(mItemOnClick);
-		
+	}
+
+	private void initHandler() {
 		mHandler = new Handler(){
 			@Override
 			public void handleMessage (Message msg){
@@ -76,31 +131,6 @@ public class WifiScanActivity extends PreferenceActivity {
 				}
 			}
 		};
-		
-		//加一个新线程用于与服务器通信
-		clientThread = new ClientThread(mHandler);
-		//在主线程中启动ClientThread线程用来与服务器通信
-		new Thread(clientThread).start();
-		
-		//TODO
-		//定时向指定服务器发送热点信息
-		if (isOnline() ) {
-			Log.v(TAG,"网络连接畅通");
-			
-			
-			if (mList_Results != null) {
-				Log.v(TAG,"mList_Results不为null");
-				for (int i = 0; i < mList_Results.size(); i++) {
-					Message msg = new Message();
-					msg.what = 0x111;
-					msg.obj = mList_Results.get(i);
-					if (clientThread.rcvHandler != null) {
-						clientThread.rcvHandler.sendMessage(msg);
-						Log.v(TAG, "clientThread.rcvHandler已发送消息：0x111");
-					}
-				}
-			}
-		}
 	}
 
 	/**
@@ -327,6 +357,14 @@ public class WifiScanActivity extends PreferenceActivity {
 		
 		switch ( mi.getItemId() ){
 		
+		case R.id.action_send_to_server:
+			if (isOnline() ) {
+				Log.v(TAG,"网络连接畅通");
+				sendToServer();
+				
+			}
+			break;
+		
 		case R.id.action_stop_updating :
 			if (isOnline() ) {
 				Log.v(TAG,"网络连接畅通");
@@ -343,8 +381,10 @@ public class WifiScanActivity extends PreferenceActivity {
 				//TODO 设置服务器IP和端口
 				
 			}
+			break;
 		}
 		return true;
 		
 	}
+
 }
