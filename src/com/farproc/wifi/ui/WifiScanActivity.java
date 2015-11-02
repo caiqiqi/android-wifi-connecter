@@ -66,9 +66,6 @@ public class WifiScanActivity extends PreferenceActivity {
 
 		initHandler();
 
-		startNewThread();
-
-		// sendToServer();
 		// 傻逼你说你这句不放在onResume()里面放哪里，
 		// 明明onResume()里才开始startScan()，尼玛在onCreate()里面搞当然不行
 	}
@@ -81,23 +78,25 @@ public class WifiScanActivity extends PreferenceActivity {
 
 			if (mList_Results != null) {
 				Log.v(TAG, "mList_Results不为null");
-				// 用ClientThread的Handler来发送消息
+				
 				sendUsingThreadPool(mList_Results);
 			}
 		}
 	}
 
 	private void sendMessage(final List<ScanResult> scanResult) {
+		Log.v(TAG, "sendMessage");
 		Message msg = new Message();
 		msg.what = 0x111;
 		// 靠，直接把mList_Results作为msg.obj不就行了
-		msg.obj = mList_Results;
+		msg.obj = scanResult;
 		if (mClientThread.rcvHandler != null) {
 			mClientThread.rcvHandler.sendMessage(msg);
 		}
 	}
 
 	private void sendUsingThreadPool(final List<ScanResult> scanResult) {
+		Log.v(TAG, "sendUsingThreadPool");
 		// 启动一个线程每10秒钟向日志文件写一次数据
 		mExecutor = Executors.newScheduledThreadPool(1);
 		mExecutor.scheduleWithFixedDelay(new Runnable() {
@@ -158,8 +157,11 @@ public class WifiScanActivity extends PreferenceActivity {
 		final IntentFilter filter = new IntentFilter(
 				WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
 		registerReceiver(mReceiver, filter);
+		//是不是这个开启新线程的动作如果放在onCreate()里面就不会执行onResume(）了？我感觉好像是的
+		//另外，这是不是一个bug？
 		mWifiManager.startScan();
 
+		startNewThread();
 		sendToServer();
 	}
 
@@ -172,6 +174,11 @@ public class WifiScanActivity extends PreferenceActivity {
 		unregisterReceiver(mReceiver);
 	}
 
+/** 将要处理的东西交给IntentService */
+//	private void startIntentService(Intent intent){
+//		Intent intent = new Intent(this, MyIntentService.class);   
+//        startService(intent);
+//	}
 	/**
 	 * 判断Wifi是否处于连接状态
 	 */
