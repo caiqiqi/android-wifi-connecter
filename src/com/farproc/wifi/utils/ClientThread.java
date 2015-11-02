@@ -7,9 +7,6 @@ import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.Socket;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 import android.content.Context;
 import android.net.wifi.ScanResult;
@@ -37,6 +34,7 @@ public class ClientThread implements Runnable {
 	private BufferedReader br;
 	
 	private OutputStream os;
+	
 //	//用PrintWriter作为输出流
 //	public PrintWriter out;
 	
@@ -50,8 +48,8 @@ public class ClientThread implements Runnable {
 		Log.v(TAG,"ClientThread started");
 		try {
 			
-			s = new Socket (SERVER_IP, SERVER_PORT);
-			init();
+			
+			initSocket();
 			//为当前线程初始化Looper
 			Looper.prepare();
 			
@@ -67,13 +65,25 @@ public class ClientThread implements Runnable {
 						
 						try{
 							
-							if(! s.isConnected()){
-								s = new Socket(SERVER_IP, SERVER_PORT);
-								Log.v("ClientThread", "Client connected to the server successfully!");
-								init();
+//							if(! s.isConnected()){
+//								
+//								initSocket();
+//							}
+							
+							StringBuilder builder = new StringBuilder(); 
+							for (ScanResult scanResult : result) {
+								builder.append(scanResult.toString() + "\r\n");
 							}
-//							sendToServer(result);
-							sendUsingThreadPool(result);
+							
+							try {
+								os.write( (builder.toString() ).getBytes("utf-8"));
+								os.flush();
+//								os.close();
+							} catch (UnsupportedEncodingException e) {
+								e.printStackTrace();
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
 							
 							} catch(Exception e){
 							e.printStackTrace();
@@ -88,6 +98,17 @@ public class ClientThread implements Runnable {
 						os.write((r.toString() + "\r\n").getBytes("utf-8"));
 						os.flush();
 						//这里不用close()，直接flush()就可以搞定。另外如果这里close()了，OutputStream就不容易再打开了
+					}
+					os.close();
+					
+					if(s != null){
+						try {
+							//因为OutputStream已经关闭了，于是Socket不得不关掉，然后再开Socket
+							s.close();
+							initSocket();
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
 					}
 					//os.close();
 					// 啊，怪不得服务器那边怎么老不关闭流，原来是这边客户端没有关闭，所以服务器那边一直在等
@@ -134,34 +155,48 @@ public class ClientThread implements Runnable {
 		}
 	}
 
-	private void init() throws IOException {
+	private void initSocket() throws IOException {
+		s = new Socket (SERVER_IP, SERVER_PORT);
 		br = new BufferedReader(new InputStreamReader(this.s.getInputStream()));
 		os = this.s.getOutputStream();
 	}
 	
-private void sendUsingThreadPool(final List<ScanResult> scanResult){
-		
-		//启动一个线程每5秒钟向日志文件写一次数据  
-        ScheduledExecutorService exec =   Executors.newScheduledThreadPool(1); 
-        exec.scheduleWithFixedDelay(new Runnable(){
-
-			@Override
-			public void run() {
-				List<ScanResult> list = scanResult;
-				for (ScanResult result : list) {
-					try {
-						
-						os.write((result.toString() + "\r\n").getBytes("utf-8"));
-						os.flush();
-					} catch (UnsupportedEncodingException e) {
-						e.printStackTrace();
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-					//这里不用close()，直接flush()就可以搞定。另外如果这里close()了，OutputStream就不容易再打开了
-				}
-			}
-        	
-        }, 0, 5, TimeUnit.SECONDS);
-	}
+//private void sendUsingThreadPool(final List<ScanResult> scanResult){
+//		
+//		//启动一个线程每10秒钟
+//        mExecutor =   Executors.newScheduledThreadPool(1); 
+//        mExecutor.scheduleWithFixedDelay(new Runnable(){
+//
+//			@Override
+//			public void run() {
+//				
+//				//为了一次性发送（即将这个List作为一个整体，好让服务器端能马上判断这个List结束了）
+//				StringBuilder builder = new StringBuilder(); 
+//				List<ScanResult> list = scanResult;
+//				for (ScanResult result : list) {
+//					builder.append(result.toString() + "\r\n");
+//				}
+//				
+//				try {
+//					os.write( (builder.toString() ).getBytes("utf-8"));
+//					os.flush();
+//					os.close();
+//				} catch (UnsupportedEncodingException e) {
+//					e.printStackTrace();
+//				} catch (IOException e) {
+//					e.printStackTrace();
+//				} finally {
+//					
+//					if(s != null){
+//						try {
+//							s.close();
+//						} catch (IOException e) {
+//							e.printStackTrace();
+//						}
+//					}
+//				}
+//			}
+//        	
+//        }, 0, 10, TimeUnit.SECONDS);
+//	}
 }

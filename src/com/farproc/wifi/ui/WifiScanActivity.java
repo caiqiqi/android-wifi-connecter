@@ -1,6 +1,5 @@
 package com.farproc.wifi.ui;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -47,64 +46,81 @@ public class WifiScanActivity extends PreferenceActivity {
 
 	private ListView mListView;
 	private WifiapAdapter mAdapter;
-	
-	//这个主线程中的Handler负责处理ClientThread中的匿名子线程中发送过来的消息(当然内容是来自服务器端)
+
+	// 这个主线程中的Handler负责处理ClientThread中的匿名子线程中发送过来的消息(当然内容是来自服务器端)
 	private Handler mHandler;
-	//与服务器通信的子线程
+	// 与服务器通信的子线程
 	private ClientThread mClientThread;
+
+	public ScheduledExecutorService mExecutor;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
 		mWifiManager = (WifiManager) getSystemService(WIFI_SERVICE);
-		
+
 		initAdapter();
 
 		initListView();
-		
+
 		initHandler();
-		
+
 		startNewThread();
-		
-		
-		sendToServer();
+
+		// sendToServer();
+		// 傻逼你说你这句不放在onResume()里面放哪里，
+		// 明明onResume()里才开始startScan()，尼玛在onCreate()里面搞当然不行
 	}
 
 	private void sendToServer() {
-		//TODO
-		//定时向指定服务器发送热点信息
-		if (isOnline() ) {
-			Log.v(TAG,"网络连接畅通");
-			
+		// TODO
+		// 定时向指定服务器发送热点信息
+		if (isOnline()) {
+			Log.v(TAG, "网络连接畅通");
+
 			if (mList_Results != null) {
-				Log.v(TAG,"mList_Results不为null");
-				//用ClientThread的Handler来发送消息
-				sendMessage();
+				Log.v(TAG, "mList_Results不为null");
+				// 用ClientThread的Handler来发送消息
+				sendUsingThreadPool(mList_Results);
 			}
 		}
 	}
 
-	private void sendMessage() {
+	private void sendMessage(final List<ScanResult> scanResult) {
 		Message msg = new Message();
 		msg.what = 0x111;
-		//靠，直接把mList_Results作为msg.obj不就行了
+		// 靠，直接把mList_Results作为msg.obj不就行了
 		msg.obj = mList_Results;
 		if (mClientThread.rcvHandler != null) {
 			mClientThread.rcvHandler.sendMessage(msg);
 		}
 	}
-	
+
+	private void sendUsingThreadPool(final List<ScanResult> scanResult) {
+		// 启动一个线程每10秒钟向日志文件写一次数据
+		mExecutor = Executors.newScheduledThreadPool(1);
+		mExecutor.scheduleWithFixedDelay(new Runnable() {
+
+			@Override
+			public void run() {
+
+				sendMessage(scanResult);
+			}
+
+		}, 0, 10, TimeUnit.SECONDS);
+	}
+
 	private void startNewThread() {
-		//加一个新线程用于与服务器通信
+		// 加一个新线程用于与服务器通信
 		mClientThread = new ClientThread(WifiScanActivity.this, mHandler);
-		//在主线程中启动ClientThread线程用来与服务器通信
+		// 在主线程中启动ClientThread线程用来与服务器通信
 		new Thread(mClientThread).start();
 	}
 
 	private void initAdapter() {
-		//这句话不能再onCreate()方法之前调用，即不能放在onCreate()方法的外面，因为系统得首先执行onCreate()
-		mAdapter = new WifiapAdapter(this,mList_Results);
+		// 这句话不能再onCreate()方法之前调用，即不能放在onCreate()方法的外面，因为系统得首先执行onCreate()
+		mAdapter = new WifiapAdapter(this, mList_Results);
 		// 为这个ListActivity设置Adapter
 		setListAdapter(mAdapter);
 	}
@@ -116,16 +132,17 @@ public class WifiScanActivity extends PreferenceActivity {
 	}
 
 	private void initHandler() {
-		mHandler = new Handler(){
+		mHandler = new Handler() {
 			@Override
-			public void handleMessage (Message msg){
-				//如果消息来自于子线程
-				if(msg.what == 0x222){
-					//先通知用户，已经接受到来自服务器的消息了
-					Toast.makeText(WifiScanActivity.this, "已更新热点信息",Toast.LENGTH_SHORT).show();
+			public void handleMessage(Message msg) {
+				// 如果消息来自于子线程
+				if (msg.what == 0x222) {
+					// 先通知用户，已经接受到来自服务器的消息了
+					Toast.makeText(WifiScanActivity.this, TAG + "已更新热点信息",
+							Toast.LENGTH_SHORT).show();
 
-					//TODO 还有后续的功能待完善。。。先不把msg显示出来
-					Log.v("WifiScanActivity",msg.obj.toString());
+					// TODO 还有后续的功能待完善。。。先不把msg显示出来
+					Log.v("WifiScanActivity", msg.obj.toString());
 				}
 			}
 		};
@@ -142,6 +159,8 @@ public class WifiScanActivity extends PreferenceActivity {
 				WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
 		registerReceiver(mReceiver, filter);
 		mWifiManager.startScan();
+
+		sendToServer();
 	}
 
 	/**
@@ -153,28 +172,32 @@ public class WifiScanActivity extends PreferenceActivity {
 		unregisterReceiver(mReceiver);
 	}
 
-/**
- * 判断Wifi是否处于连接状态
- */
-	private boolean isWifiConnected(){
-		return  ((ConnectivityManager) this.getSystemService(Context.CONNECTIVITY_SERVICE)).getNetworkInfo(ConnectivityManager.TYPE_WIFI).isConnected();
+	/**
+	 * 判断Wifi是否处于连接状态
+	 */
+	private boolean isWifiConnected() {
+		return ((ConnectivityManager) this
+				.getSystemService(Context.CONNECTIVITY_SERVICE))
+				.getNetworkInfo(ConnectivityManager.TYPE_WIFI).isConnected();
 	}
-	
+
 	/**
 	 * 判断网络连接是否畅通
 	 */
-	private boolean isOnline(){
-	    ConnectivityManager connMgr =(ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
-	    NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
-	    //networkInfo不为空，且isConnected()返回true
-	    return(networkInfo !=null&& networkInfo.isConnected());
+	private boolean isOnline() {
+		ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+		NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+		// networkInfo不为空，且isConnected()返回true
+		return (networkInfo != null && networkInfo.isConnected());
 	}
-/**
- * 	获取BSSID
- */
-	private String getBSSID(){
+
+	/**
+	 * 获取BSSID
+	 */
+	private String getBSSID() {
 		return mWifiManager.getConnectionInfo().getBSSID();
 	}
+
 	// 这个Receiver是接收这个 “SCAN_RESULTS_AVAILABLE_ACTION”Action的
 	private BroadcastReceiver mReceiver = new BroadcastReceiver() {
 
@@ -185,8 +208,7 @@ public class WifiScanActivity extends PreferenceActivity {
 			// An access point scan has completed
 			if (action.equals(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)) {
 				mList_Results = mWifiManager.getScanResults();
-				
-				
+
 				mAdapter.notifyDataSetChanged();
 
 				mWifiManager.startScan();
@@ -194,7 +216,7 @@ public class WifiScanActivity extends PreferenceActivity {
 
 		}
 	};
-	
+
 	public class WifiapAdapter extends BaseAdapter {
 
 		private boolean isWifiConnected;
@@ -209,7 +231,7 @@ public class WifiScanActivity extends PreferenceActivity {
 			isWifiConnected = false;
 
 		}
-		
+
 		@Override
 		public int getCount() {
 			if (mList_Results == null) {
@@ -233,28 +255,31 @@ public class WifiScanActivity extends PreferenceActivity {
 			ScanResult ap = mList_Results.get(position);
 			ViewHolder viewHolder = null;
 			isWifiConnected = false;
-			
-			if(convertView == null){
+
+			if (convertView == null) {
 				viewHolder = new ViewHolder();
 				convertView = inflater.inflate(R.layout.listitem_wifiap, null);
-				viewHolder.iv_rssi = ((ImageView) convertView.findViewById(R.id.wifiap_item_iv_rssi));
-	            viewHolder.tv_ssid = ((TextView) convertView.findViewById(R.id.wifiap_item_tv_ssid));
-	            viewHolder.tv_desc = ((TextView) convertView.findViewById(R.id.wifiap_item_tv_desc));
-				
+				viewHolder.iv_rssi = ((ImageView) convertView
+						.findViewById(R.id.wifiap_item_iv_rssi));
+				viewHolder.tv_ssid = ((TextView) convertView
+						.findViewById(R.id.wifiap_item_tv_ssid));
+				viewHolder.tv_desc = ((TextView) convertView
+						.findViewById(R.id.wifiap_item_tv_desc));
+
 				convertView.setTag(viewHolder);
-			}
-			else{
+			} else {
 				viewHolder = (ViewHolder) convertView.getTag();
 			}
-			
-			if (isWifiConnected() && ap.BSSID.equals(getBSSID())) {
-	            isWifiConnected = true;
-	        }
 
-	        viewHolder.tv_ssid.setText(ap.SSID);
-	        viewHolder.tv_desc.setText(getDesc(ap));
-	        Picasso.with(mmContext).load(getRssiImgId(ap)).into(viewHolder.iv_rssi);
-	        return convertView;
+			if (isWifiConnected() && ap.BSSID.equals(getBSSID())) {
+				isWifiConnected = true;
+			}
+
+			viewHolder.tv_ssid.setText(ap.SSID);
+			viewHolder.tv_desc.setText(getDesc(ap));
+			Picasso.with(mmContext).load(getRssiImgId(ap))
+					.into(viewHolder.iv_rssi);
+			return convertView;
 		}
 
 		/**
@@ -285,10 +310,10 @@ public class WifiScanActivity extends PreferenceActivity {
 			}
 			return imgId;
 		}
-	
+
 		private String getDesc(ScanResult ap) {
-	        String desc = "";
-	        
+			String desc = "";
+
 			String descOri = ap.capabilities;
 			if (descOri.toUpperCase().contains("WPA-PSK")
 					|| descOri.toUpperCase().contains("WPA2-PSK")) {
@@ -297,12 +322,12 @@ public class WifiScanActivity extends PreferenceActivity {
 				desc = "Open";
 			}
 
-	        // 是否连接此热点
-	        if (isWifiConnected) {
-	            desc = "Connected";
-	        }
-	        return desc;
-	    }
+			// 是否连接此热点
+			if (isWifiConnected) {
+				desc = "Connected";
+			}
+			return desc;
+		}
 	}
 
 	// 装ListView中的每一项的容器
@@ -311,6 +336,7 @@ public class WifiScanActivity extends PreferenceActivity {
 		public TextView tv_ssid;
 		public TextView tv_desc;
 	}
+
 	// 每一项的“单击”监听器
 	private OnItemClickListener mItemOnClick = new OnItemClickListener() {
 
@@ -343,46 +369,67 @@ public class WifiScanActivity extends PreferenceActivity {
 	}
 
 	@Override
-	public boolean onCreateOptionsMenu(Menu menu){
-		
-		getMenuInflater().inflate(R.menu.activity_main, menu); 
+	public boolean onCreateOptionsMenu(Menu menu) {
+
+		getMenuInflater().inflate(R.menu.activity_main, menu);
 		return true;
-		
+
 	}
-	
+
 	@Override
-	public boolean onOptionsItemSelected(MenuItem mi){
-		
-		switch ( mi.getItemId() ){
-		
-		case R.id.action_send_to_server:
-			if (isOnline() ) {
-				Log.v(TAG,"网络连接畅通");
-				sendToServer();
-				
+	public boolean onOptionsItemSelected(MenuItem mi) {
+
+		switch (mi.getItemId()) {
+
+		// case R.id.action_send_to_server:
+		// if (isOnline() ) {
+		// Log.v(TAG,"网络连接畅通");
+		// sendToServer();
+		//
+		// }
+		// break;
+
+		case R.id.action_stop_updating:
+			if (isOnline()) {
+				Log.v(TAG, "网络连接畅通");
+
+				stopUpdate();
+
 			}
 			break;
-		
-		case R.id.action_stop_updating :
-			if (isOnline() ) {
-				Log.v(TAG,"网络连接畅通");
-				
-				//TODO 停止更新
-				
-			}
-			break;
-			
+
 		case R.id.action_set_server:
-			if(isOnline()) {
-				Log.v(TAG,"网络连接畅通");
-				
-				//TODO 设置服务器IP和端口
-				
+			if (isOnline()) {
+				Log.v(TAG, "网络连接畅通");
+
+				// TODO 设置服务器IP和端口
+				setServer();
 			}
 			break;
 		}
 		return true;
-		
+
+	}
+
+	/**
+	 * 设置服务器的IP和port
+	 */
+	private void setServer() {
+		// TODO Auto-generated method stub
+
+	}
+
+	/**
+	 * 停止向服务器上传热点信息
+	 */
+	private void stopUpdate() {
+
+		if (mExecutor != null) {
+			mExecutor.shutdown();
+
+			Toast.makeText(WifiScanActivity.this, "Update stopped",
+					Toast.LENGTH_SHORT).show();
+		}
 	}
 
 }
