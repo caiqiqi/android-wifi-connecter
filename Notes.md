@@ -10,13 +10,15 @@ Wifi -> connectToNewNetwork() </br>
   
     private BroadcastReceiver mReceiver = new BroadcastReceiver(){
       public void onReceive(Context context, Intent intent){
-        if(!mReenabled) {
+      	if(!mReenabled) {
 		mReenabled = true;
 		reenableAllAps(context);
 		//stop the service if it was previously started
 		BackgroundService.this.stopSelf();
 	}
+      
       }
+        
     }
     
     public IBinder onBind(Intent intent){
