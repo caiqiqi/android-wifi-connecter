@@ -78,7 +78,7 @@ public class WifiScanActivity extends PreferenceActivity {
 
 			if (mList_Results != null) {
 				Log.v(TAG, "mList_Results不为null");
-				
+
 				sendUsingThreadPool(mList_Results);
 			}
 		}
@@ -113,7 +113,7 @@ public class WifiScanActivity extends PreferenceActivity {
 	private void startNewThread() {
 		// 加一个新线程用于与服务器通信
 		mClientThread = new ClientThread(WifiScanActivity.this, mHandler);
-		// 在主线程中启动ClientThread线程用来与服务器通信
+		// 在主线程中启动ClientThread线程用来 a与服务器通信
 		new Thread(mClientThread).start();
 	}
 
@@ -157,8 +157,8 @@ public class WifiScanActivity extends PreferenceActivity {
 		final IntentFilter filter = new IntentFilter(
 				WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
 		registerReceiver(mReceiver, filter);
-		//是不是这个开启新线程的动作如果放在onCreate()里面就不会执行onResume(）了？我感觉好像是的
-		//另外，这是不是一个bug？
+		// 是不是这个开启新线程的动作如果放在onCreate()里面就不会执行onResume(）了？我感觉好像是的
+		// 另外，这是不是一个bug？
 		mWifiManager.startScan();
 
 		startNewThread();
@@ -174,11 +174,11 @@ public class WifiScanActivity extends PreferenceActivity {
 		unregisterReceiver(mReceiver);
 	}
 
-/** 将要处理的东西交给IntentService */
-//	private void startIntentService(Intent intent){
-//		Intent intent = new Intent(this, MyIntentService.class);   
-//        startService(intent);
-//	}
+	/** 将要处理的东西交给IntentService */
+	// private void startIntentService(Intent intent){
+	// Intent intent = new Intent(this, MyIntentService.class);
+	// startService(intent);
+	// }
 	/**
 	 * 判断Wifi是否处于连接状态
 	 */
@@ -387,14 +387,6 @@ public class WifiScanActivity extends PreferenceActivity {
 	public boolean onOptionsItemSelected(MenuItem mi) {
 
 		switch (mi.getItemId()) {
-
-		// case R.id.action_send_to_server:
-		// if (isOnline() ) {
-		// Log.v(TAG,"网络连接畅通");
-		// sendToServer();
-		//
-		// }
-		// break;
 
 		case R.id.action_stop_updating:
 			if (isOnline()) {
