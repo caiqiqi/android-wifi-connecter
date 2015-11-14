@@ -2,11 +2,10 @@
 
 Wifi -> connectToNewNetwork() </br>
     -> connectToConfiguredNetwork() </br>
-    -> ReenableAllApsWhenNetworkStateChanged.schedule(context)
-    -> context.startService(new Intent(context, BackgroundService.class))
+    -> ReenableAllApsWhenNetworkStateChanged.schedule(context) </br>
+    -> context.startService(new Intent(context, BackgroundService.class)) </br>
     -> 
-  ReenableAllApsWhenNetworkState$BackgroundService extends Service
-    
+  ReenableAllApsWhenNetworkState$BackgroundService extends Service {
     private BroadcastReceiver mReceiver = new BroadcastReceiver(){
       public void onReceive(Context context, Intent intent){
         if(!mReenabled) {
@@ -30,3 +29,4 @@ Wifi -> connectToNewNetwork() </br>
     public void onDestroy(){
       inregisterReceiver(mReceiver);
     }
+}
