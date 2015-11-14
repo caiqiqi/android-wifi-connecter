@@ -7,6 +7,7 @@ Wifi -> connectToNewNetwork() </br>
     -> 
   ```
   ReenableAllApsWhenNetworkState$BackgroundService extends Service {
+  
     private BroadcastReceiver mReceiver = new BroadcastReceiver(){
       public void onReceive(Context context, Intent intent){
         if(!mReenabled) {
