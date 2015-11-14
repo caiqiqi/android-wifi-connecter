@@ -1,6 +1,6 @@
 # Bugs and solutions invloved
 
-连接到某“新网络”的时候其实是先让它成为“已配置的网络”，然后再运行一个Service
+连接到某“新网络”的时候其实是先让它成为“已配置的网络”，然后再运行一个Service </br>
 Wifi -> connectToNewNetwork() </br>
     -> connectToConfiguredNetwork() </br>
     -> ReenableAllApsWhenNetworkStateChanged.schedule(context) </br>
