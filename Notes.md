@@ -18,12 +18,12 @@ Wifi -> connectToNewNetwork() </br>
 		BackgroundService.this.stopSelf();
 	}
       
-      }
+        }
         
     }
     
     public IBinder onBind(Intent intent){
-      return null;
+      return null;// We need not bind to it at all.
     }
     
     public void onCreate(){
