@@ -16,9 +16,9 @@ Wifi -> connectToNewNetwork() </br>
 		reenableAllAps(context);
 		//stop the service if it was previously started
 		BackgroundService.this.stopSelf();
-	}
+	  }
       
-        }
+      }
         
     }
     
